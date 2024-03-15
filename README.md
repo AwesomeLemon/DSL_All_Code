@@ -1,3 +1,29 @@
+# Fork of DSL used as a baseline
+
+See the original readme below, it includes the installation instructions.
+
+To run the code on our data, execute the following commands (substitutting relevant configs and paths):
+
+```
+conda activate feddgan
+
+# train GAN
+cd ~/s2/dsl/FedML/fedml_experiments/distributed/asdgan
+sh run_asdgan_distributed_pytorch.sh 3 qata_gan_0.yml
+
+# look at synthetic samples
+python save_syn.py --cfg qata_gan_0.yml --batch_size 20 --save_dir ./run/qata/asdgan/experiment_0 --GPUid 0 --num_test 1 --epoch 200
+# save synthetic samples
+python save_syn.py --cfg qata_gan_0.yml --batch_size 20 --save_dir ./run/qata/asdgan/experiment_0 --GPUid 0 --num_test -1 --epoch 200 --save_data
+
+# train a segmentation model
+cd ~/s2/dsl/segmentation/
+python train.py -d 0,1 -c config_files/qata_unet_0.json
+# test
+python test_general_2d.py -d 0,1 -c config_files/qata_unet_0.json -r saved/models/qata_unet_0/0314_095906/model_best.pth
+
+```
+
 # DSL
 [![DOI](https://zenodo.org/badge/531561838.svg)](https://zenodo.org/badge/latestdoi/531561838)
 
