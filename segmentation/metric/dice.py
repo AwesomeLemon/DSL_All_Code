@@ -15,6 +15,9 @@ def one_cls_dice(output, target, label_idx):
         pred = torch.argmax(output, 1)
         pred_bool = (pred == label_idx)
         target_bool = (target == label_idx)
+        if len(target_bool.shape) == 4:
+            assert target_bool.shape[1] == 1, "target has just one channel with the contents 0,..,n_classes-1"
+            target_bool = target_bool.squeeze(1)
         assert pred_bool.shape == target_bool.shape
 
         intersection = pred_bool * target_bool

@@ -224,7 +224,7 @@ def convert_to_uint8( image, drange=[0,1]):
 
 def adjust_dynamic_range(data, drange_in, drange_out):
     if drange_in != drange_out:
-        scale = (np.float32(drange_out[1]) - np.float32(drange_out[0])) / (np.float32(drange_in[1]) - np.float32(drange_in[0]))
+        scale = (np.float32(drange_out[1]) - np.float32(drange_out[0])) / max(np.float32(drange_in[1]) - np.float32(drange_in[0]), 1e-6)
         bias = (np.float32(drange_out[0]) - np.float32(drange_in[0]) * scale)
         data = data * scale + bias
     return data

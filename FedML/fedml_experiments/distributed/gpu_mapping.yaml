@@ -45,3 +45,15 @@ mapping_config_sense02_1:
 
 mapping_config_sense02_4:
     localhost: [1, 1, 1, 2]
+
+# this is used for 2 clients and 1 server training using 1 machines with 4 GPUs.
+mapping_config_2clients_1server_4gpus:
+    localhost: [0, 1, 1, 1]
+mapping_config_2clients_1server_4gpus_other:
+    localhost: [1, 0, 1, 1]
+mapping_config_2clients_1server_4gpus_3atsametime_2:
+    localhost: [2, 1, 0, 0]
+mapping_config_2clients_1server_4gpus_3atsametime_3:
+    localhost: [0, 0, 1, 2]
+mapping_config_2clients_1server_4gpus_usefirst2only:
+    localhost: [1, 2, 0, 0]

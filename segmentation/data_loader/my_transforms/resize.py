@@ -38,10 +38,16 @@ class Resize:
         # mask = np.moveaxis(mask, 0, -1)
 
         new_image = resize(image, self.load_size, order=self.interp, preserve_range=True)
+        # print(f"Before resize: mask.shape = {mask.shape}")
+
+        if len(mask.shape) == 3:
+            mask = np.moveaxis(mask, 0, -1)
         new_mask = resize(mask, self.load_size, order=0, preserve_range=True)
 
         new_image = np.moveaxis(new_image, -1, 0).reshape((c, self.load_size[0], self.load_size[1]))
-        # new_mask = np.moveaxis(new_mask, -1, 0).reshape((self.load_size[0], self.load_size[1]))
+        if len(mask.shape) == 3:
+            new_mask = np.moveaxis(new_mask, -1, 0).reshape((self.load_size[0], self.load_size[1]))
+        # print(f"After resize: new_mask.shape = {new_mask.shape}")
 
         misc['orig_size'] = (c, h, w)
 

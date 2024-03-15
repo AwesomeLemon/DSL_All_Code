@@ -1,4 +1,5 @@
 import random
+import time
 
 import numpy as np
 import torch
@@ -40,6 +41,7 @@ class Trainer(BaseTrainer):
         :param epoch: Integer, current training epoch.
         :return: A log that contains average loss and metric in this epoch.
         """
+        st = time.time()
         self.model.train()
         self.train_metrics.reset()
         # for batch_idx, (data, target, misc) in enumerate(self.data_loader):
@@ -54,6 +56,7 @@ class Trainer(BaseTrainer):
             self.optimizer.zero_grad()
             output = self.model(data)
             each_loss = []
+            # print(f"Output: {output.shape} | Target: {target.shape}")
             loss = self.criterion[0](output, target, misc)
             each_loss.append(float(loss))
             if len(self.criterion) > 1:
@@ -103,14 +106,18 @@ class Trainer(BaseTrainer):
             if batch_idx == self.len_epoch:
                 break
         log = self.train_metrics.result()
+        self.logger.debug(f"Train | {time.time() - st:.2f} seconds")
 
         if self.do_validation:
+            st = time.time()
             val_log = self._valid_epoch(epoch)
             log.update(**{'val_' + k: v for k, v in val_log.items()})
+            self.logger.debug(f"Validation | {time.time() - st:.2f} seconds")
 
         if self.lr_scheduler is not None:
             self.lr_scheduler.step()
             self.logger.debug(f"Learning Rate:{self.lr_scheduler.get_lr()}")
+
         return log
 
     def _valid_epoch(self, epoch):

@@ -69,7 +69,7 @@ class FasterGeneralDataLoader(DataLoader):
             self.shuffle = shuffle
 
             self.init_kwargs = {
-                'dataset': self.train_dataset,
+                'dataset': self.train_dataset if training else self.valid_dataset,
                 'batch_size': batch_size,
                 'shuffle': self.shuffle,
                 'collate_fn': collate_fn,
@@ -151,31 +151,60 @@ class GeneralDataset(data.Dataset):
         self.h5_filepath = h5_filepath
         self.transforms = transforms
         self.has_label = has_label
-        self.img_list = self._get_img_list(h5_filepath, paths)
+        self.img_list, self.has_patient_id = self._get_img_list(h5_filepath, paths)
         self.paths = paths
         if not has_label:
             print(f"The dataset don't have label, will use zero tensor instead. Please don't use.")
 
     def _get_img_list(self, h5_filepath, paths):
         img_list = []
+        has_patient_id = False
 
         with h5py.File(h5_filepath, 'r') as h5_file:
             for path in paths:
-                for key in h5_file[path].keys():
-                    img = h5_file[f"{path}/{key}/data"][()]
-                    if self.has_label:
-                        label = h5_file[f"{path}/{key}/label"][()]
-                    else:
-                        label = np.zeros_like(img)
-                    img_list.append((img, label, f"{path}/{key}/data", f"{path}/{key}/label"))
+                if (path != 'other_format') and not (paths == ['train'] and 'train' not in h5_file):
+                    for key in h5_file[path].keys():
+                        img = h5_file[f"{path}/{key}/data"][()]
+                        if img.shape[-1] == 3:
+                            img = np.moveaxis(img, -1, 0)
+                        if self.has_label:
+                            label = h5_file[f"{path}/{key}/label"][()]
+                        else:
+                            label = np.zeros_like(img)
+                        if f"{path}/{key}/patient" not in h5_file:
+                            img_list.append((img, label, f"{path}/{key}/data", f"{path}/{key}/label"))
+                        else:
+                            has_patient_id = True
+                            patient_id = h5_file[f"{path}/{key}/patient"][()]
+                            img_list.append((img, label, f"{path}/{key}/data", f"{path}/{key}/label",
+                                             patient_id))
+                        # print(f"img.shape {img.shape} | label.shape {label.shape}")
+                else:
+                    # h5 format is images/name and labels/name, without "path" prefix
+                    for key in h5_file['images'].keys():
+                        img = h5_file[f"images/{key}"][()]
+                        if img.shape[-1] == 3:
+                            img = np.moveaxis(img, -1, 0)
+                        if self.has_label:
+                            label = h5_file[f"labels/{key}"][()]
+                        else:
+                            label = np.zeros_like(img)
+                        img_list.append((img, label, f"images/{key}", f"labels/{key}"))
+
             h5_file.close()
-        return img_list
+        return img_list, has_patient_id
 
     def __getitem__(self, index):
         with h5py.File(self.h5_filepath, 'r') as h5_file:
-            img, label, img_path, label_path = self.img_list[index]
+            if not self.has_patient_id:
+                img, label, img_path, label_path = self.img_list[index]
+            else:
+                img, label, img_path, label_path, patient_id = self.img_list[index]
+            # print(f"img.shape {img.shape} | label.shape {label.shape}")
+            # print(f"img: {img.min()} {img.max()} | label: {label.min()} {label.max()}")
+
             if self.transforms is not None:
-                img = self.transforms({'image': img, 'mask': label, "misc": {
+                misc_dict = {
                     "index": index,
                     "len": self.__len__(),
                     "img_path": img_path,
@@ -183,7 +212,11 @@ class GeneralDataset(data.Dataset):
                     "data_attrs": list(h5_file[img_path].attrs.values()),
                     "label_attrs": list(h5_file[label_path].attrs.values()),
                     "paths": self.paths
-                }})
+                }
+                if self.has_patient_id:
+                    misc_dict["patient_id"] = patient_id
+                img = self.transforms({'image': img, 'mask': label, "misc": misc_dict})
+            # print(f"img['image'].shape {img['image'].shape} | img['mask'].shape {img['mask'].shape}")
 
         return img['image'], img['mask'], img['misc']
 

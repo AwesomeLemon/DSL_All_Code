@@ -350,9 +350,9 @@ class AsDGanAggregator(object):
                     elif 'flair' in self.args.dataset:
                         mod_names = ['Flair']
             else:
-                num_c = 1 + 2
+                num_c = 1 + 2 * nc
                 show_RGB = False
-                mod_names = ['img']
+                mod_names = [f'img_{j}' for j in range(nc)]
 
             ctr = 0
             plt.figure(figsize=(num_c*3, 9))
@@ -365,9 +365,13 @@ class AsDGanAggregator(object):
 
                 ctr += 1
                 plt.subplot(num_r, num_c, ctr)
+                if label.max() < 255:
+                    mul = 255 // label.max()
+                    label = label * mul
+                    print(f'mul {mul} | label.max() {label.max()}')
                 plt.imshow(label, cmap="gray")
                 if i == 0:
-                    plt.title("Label")
+                    plt.title(f"Label")
                 plt.axis('off')
 
                 if show_RGB:

@@ -175,6 +175,64 @@ def create_dataset(args, channel_in, test_bs, sample_rate=0.1, use_brain_mask=Fa
                               sample_rate=sample_rate,
                               transforms=transform_test)
 
+    elif 'qata' in args.dataset:
+        from fedml_api.data_preprocessing._qata.data_loader_asdgan import TestDataset
+        h5_test = os.path.join(args.data_dir, args.siteA_dir, 'train_all.h5')
+
+        print(h5_test)
+        transforms_test = ["RandomResize", "RandomCrop", "ToTensorScale", "Normalize"]
+        transforms_args_test = {
+            "RandomResize": [[1, 1.05]],
+            "RandomCrop": [args.crop_size],
+            "ToTensorScale": ['float', 255, 1],
+            "Normalize": [0.5, 0.5]
+        }
+        transform_test = init_transform(transforms_test, transforms_args_test)
+
+        test_ds = TestDataset(h5_test,
+                              channel_in=channel_in,
+                              sample_rate=sample_rate,
+                              transforms=transform_test)
+
+    elif 'polyp' in args.dataset:
+        from fedml_api.data_preprocessing._polyp.data_loader_asdgan import TestDataset
+        h5_test = os.path.join(args.data_dir, args.siteA_dir, 'train_all.h5')
+
+        print(h5_test)
+        transforms_test = ["RandomResize", "RandomCrop", "ToTensorScale", "Normalize"]
+        transforms_args_test = {
+            "RandomResize": [[1, 1.05]],
+            "RandomCrop": [args.crop_size],
+            "ToTensorScale": ['float', 255, 1],
+            "Normalize": [0.5, 0.5]
+        }
+        transform_test = init_transform(transforms_test, transforms_args_test)
+
+        test_ds = TestDataset(h5_test,
+                              channel_in=channel_in,
+                              sample_rate=sample_rate,
+                              transforms=transform_test)
+
+    elif 'cervix' in args.dataset:
+        from fedml_api.data_preprocessing._cervix.data_loader_asdgan import TestDataset
+        h5_test = os.path.join(args.data_dir, args.siteA_dir, 'train_all.h5')
+
+        print(h5_test)
+        transforms_test = ["RandomResize", "RandomCrop", "ToTensorScale", "NormalizeBoth"]
+        transforms_args_test = {
+            "RandomResize": [[1, 1.05]],
+            "RandomCrop": [args.crop_size],
+            "ToTensorScale": ['float', 255, 4],
+            "NormalizeBoth": [0.5, 0.5]
+        }
+        transform_test = init_transform(transforms_test, transforms_args_test)
+
+        test_ds = TestDataset(h5_test,
+                              channel_in=channel_in,
+                              sample_rate=sample_rate,
+                              transforms=transform_test)
+
+
     test_dl = data.DataLoader(dataset=test_ds, batch_size=test_bs, shuffle=False, drop_last=False)
     return test_dl
 
@@ -228,6 +286,26 @@ def save_data(A, B, fake_B, labels_ternary, weight_map, key, file, dataset, news
         label = np.round(label * 10).astype("uint8")
         if len(label.shape) == 3:
             label = label[0]
+        if newsize:
+            label = resize(label, newsize, order=0, preserve_range=True)
+        save_type = "train"
+        file.create_dataset(f"{save_type}/{key}/data", data=syn_img.astype("uint8"), compression="gzip")
+        file.create_dataset(f"{save_type}/{key}/label", data=label.astype("uint8"), compression="gzip")
+    elif ('qata' in dataset) or ('polyp' in dataset):
+        label = (label + 1) / 2
+        label = np.round(label).astype("uint8")
+        print(np.unique(label))
+
+        if newsize:
+            label = resize(label, newsize, order=0, preserve_range=True)
+        save_type = "train"
+        file.create_dataset(f"{save_type}/{key}/data", data=syn_img.astype("uint8"), compression="gzip")
+        file.create_dataset(f"{save_type}/{key}/label", data=label.astype("uint8"), compression="gzip")
+    elif 'cervix' in dataset:
+        label = (label + 1) / 2
+        label = np.round(label * 4).astype("uint8")
+        print(np.unique(label))
+
         if newsize:
             label = resize(label, newsize, order=0, preserve_range=True)
         save_type = "train"
@@ -358,6 +436,132 @@ def plot_syn_path(A, B, fake_B, labels_ternary, weight_map, key, save_dir):
         showtitle = False
 
 
+def plot_syn_qata(A, B, fake_B, key, save_dir):
+    # nc = B.shape[0]
+    num_r = 1
+    num_c = 3
+    ctr = 0
+    # print(fake_B.max(), fake_B.min())
+
+    syn_img = float_to_uint_img(fake_B, None, 1, -1, 1)
+    if len(syn_img.shape) == 3:
+        syn_img = np.moveaxis(syn_img, 0, -1)
+        if syn_img.shape[-1] == 1:
+            syn_img = syn_img[..., 0]
+
+    label = A
+    if len(label.shape) == 3:
+        label = label[0]
+    label = (label + 1) / 2
+    label = np.round(label).astype("uint8")
+    print(np.unique(label))
+
+    realdata = float_to_uint_img(B, None, 1, -1, 1)
+    if len(realdata.shape) == 3:
+        realdata = np.moveaxis(realdata, 0, -1)
+        if realdata.shape[-1] == 1:
+            realdata = realdata[..., 0]
+
+    if_save_individual_syn = True
+    if if_save_individual_syn:
+        from PIL import Image
+        data = Image.fromarray(syn_img)
+        data.save(os.path.join(save_dir, key + '_syn.png'))
+        return
+
+    if ctr == 0:
+        plt.figure(figsize=(20, 10))
+        showtitle = True
+
+    ctr += 1
+    plt.subplot(num_r, num_c, ctr)
+    plt.imshow(label, cmap='tab10')
+    if showtitle:
+        plt.title("Label")
+    plt.axis('off')
+
+    ctr += 1
+    plt.subplot(num_r, num_c, ctr)
+    plt.imshow(syn_img, cmap='gray')
+    if showtitle:
+        plt.title('syn')
+    plt.axis('off')
+
+    ctr += 1
+    plt.subplot(num_r, num_c, ctr)
+    plt.imshow(realdata, cmap='gray')
+    if showtitle:
+        plt.title('real')
+    plt.axis('off')
+
+    if ctr == num_r * num_c:
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_dir, "images-" + key))
+        plt.close()
+    else:
+        showtitle = False
+
+
+def plot_syn_cervix(A, B, fake_B, key, save_dir):
+    # nc = B.shape[0]
+    num_r = 1
+    num_c = 3
+    ctr = 0
+    # print(fake_B.max(), fake_B.min())
+
+    syn_img = float_to_uint_img(fake_B, None, 1, -1, 1)
+    if len(syn_img.shape) == 3:
+        syn_img = np.moveaxis(syn_img, 0, -1)
+        if syn_img.shape[-1] == 1:
+            syn_img = syn_img[..., 0]
+
+    label = A
+    if len(label.shape) == 3:
+        label = label[0]
+
+    label = (label + 1) / 2
+    label = np.round(label * 4).astype("uint8")
+    print(np.unique(label))
+
+    realdata = float_to_uint_img(B, None, 1, -1, 1)
+    if len(realdata.shape) == 3:
+        realdata = np.moveaxis(realdata, 0, -1)
+        if realdata.shape[-1] == 1:
+            realdata = realdata[..., 0]
+
+    if ctr == 0:
+        plt.figure(figsize=(20, 10))
+        showtitle = True
+
+    ctr += 1
+    plt.subplot(num_r, num_c, ctr)
+    plt.imshow(label, cmap='tab10')
+    if showtitle:
+        plt.title("Label")
+    plt.axis('off')
+
+    ctr += 1
+    plt.subplot(num_r, num_c, ctr)
+    plt.imshow(syn_img, cmap='gray')
+    if showtitle:
+        plt.title('syn')
+    plt.axis('off')
+
+    ctr += 1
+    plt.subplot(num_r, num_c, ctr)
+    plt.imshow(realdata, cmap='gray')
+    if showtitle:
+        plt.title('real')
+    plt.axis('off')
+
+    if ctr == num_r * num_c:
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_dir, "images-" + key))
+        plt.close()
+    else:
+        showtitle = False
+
+
 def plot_syn_heart(A, B, fake_B, key, save_dir):
     # nc = B.shape[0]
     num_r = 1
@@ -435,6 +639,8 @@ if __name__ == '__main__':
         cfg = yaml.load(f, Loader=yaml.FullLoader)
 
     args = cfg_parse_infer(args, cfg)
+    if 'siteA_dir' in cfg:
+        args.siteA_dir = cfg['siteA_dir']
 
     print(args)
 
@@ -498,6 +704,8 @@ if __name__ == '__main__':
                         save_data(A[j], img[j], syn_img[j], labels_ternary[j], weight_maps[j], data['key'][j]+'_%i'%si, file, args.dataset)
                     elif 'heart' in args.dataset:
                         save_data(A[j], img[j], syn_img[j], None, None, data['key'][j], file, args.dataset)
+                    elif ('qata' in args.dataset) or ('polyp' in args.dataset) or ('cervix' in args.dataset):
+                        save_data(A[j], img[j], syn_img[j], None, None, data['key'][j], file, args.dataset)
                 else:
                     if 'brats' in args.dataset:
                         if 't2' in args.dataset:
@@ -514,6 +722,12 @@ if __name__ == '__main__':
                         # plot_syn_path_idv(A[j], img[j], syn_img[j], data['key'][j], si, save_dir)
                     elif 'heart' in args.dataset:
                         plot_syn_heart(A[j], img[j], syn_img[j], data['key'][j], save_dir)
+                    elif ('qata' in args.dataset) or ('polyp' in args.dataset):
+                        print(f'syn_img[j].shape {syn_img[j].shape} | img[j].shape {img[j].shape}')
+                        plot_syn_qata(A[j], img[j], syn_img[j], data['key'][j], save_dir)
+                    elif 'cervix':
+                        print(f'syn_img[j].shape {syn_img[j].shape} | img[j].shape {img[j].shape}')
+                        plot_syn_cervix(A[j], img[j], syn_img[j], data['key'][j], save_dir)
 
             print(f"{i} processed {data['key']}")
             sys.stdout.flush()

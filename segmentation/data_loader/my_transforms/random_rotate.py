@@ -33,7 +33,7 @@ class RandomRotate:
         #         misc['labels_ternary'] = np.moveaxis(misc['labels_ternary'], -1, -2).copy()
         #     if 'weight_maps' in misc:
         #         misc['weight_maps'] = np.moveaxis(misc['weight_maps'], -1, -2).copy()
-        if self.tilt > 0 and random.random() < 0.5:
+        if self.tilt > 0:
             # rotate image and mask += self.tilt degree
             deg = random.randint(-self.tilt, self.tilt)
             image = ndimage.rotate(image, deg, axes=(-1, -2), reshape=False)

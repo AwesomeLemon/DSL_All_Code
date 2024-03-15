@@ -193,10 +193,16 @@ def load_data(process_id, args):
         from fedml_api.data_preprocessing.exp2_path.data_loader_asdgan import load_partition_data_distributed_path as data_loader
     elif args.dataset.lower() == 'heart':
         from fedml_api.data_preprocessing.exp1_heart.data_loader_asdgan import load_partition_data_distributed_heart as data_loader
+    elif args.dataset.lower() == 'qata':
+        from fedml_api.data_preprocessing._qata.data_loader_asdgan import load_partition_data_distributed_qata as data_loader
+    elif args.dataset.lower() == 'polyp':
+        from fedml_api.data_preprocessing._polyp.data_loader_asdgan import load_partition_data_distributed_polyp as data_loader
+    elif args.dataset.lower() == 'cervix':
+        from fedml_api.data_preprocessing._cervix.data_loader_asdgan import load_partition_data_distributed_cervix as data_loader
 
     train_data_num, train_data_set_global, test_data_loader_global, local_data_num, train_data_local, test_data_local, class_num = data_loader(
         process_id, args.dataset, args.data_dir, args.partition_method, args.client_num_in_total, args.batch_size, args.sample_method,
-        args.input_nc, args.brain_mask_input==1, args.brain_mask_noise)
+        args.input_nc, args.brain_mask_input==1, args.brain_mask_noise, args)
     dataset = [train_data_num, train_data_set_global, test_data_loader_global, local_data_num, train_data_local, test_data_local, class_num]
 
     return dataset

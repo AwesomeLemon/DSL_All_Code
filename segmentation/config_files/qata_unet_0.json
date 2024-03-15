@@ -1,0 +1,77 @@
+{
+    "name": "qata_unet_0",
+    "n_gpu": 2,
+
+    "model": {
+        "type": "Unet",
+        "args": {
+            "in_channel" : 1,
+            "out_channel": 2
+        }
+    },
+    "data_loader": {
+        "type": "FasterGeneralDataLoader",
+        "args":{
+            "data_dir": "/export/scratch2/aleksand/dsl/FedML/fedml_experiments/distributed/asdgan/results/asdgan/test_200/qata_resnet_9blocks_epoch200_experiment_0.h5",
+            "batch_size": 32,
+            "shuffle": true,
+            "validation_split": 0.2,
+            "num_workers": 0
+        },
+        "transforms": ["ToImage","Resize", "RandomCrop", "RandomFlip","ToTensor","Normalize"],
+        "transforms_args": {
+            "Resize": [286],
+            "RandomCrop": [256],
+            "RandomFlip": [true, true],
+            "Normalize": [[127.5],[127.5]]
+        }
+    },
+    "test_data_loader": {
+        "type": "FasterGeneralDataLoader",
+        "args":{
+            "data_dir": ["/export/scratch2/aleksand/data/Dataset700_qata_h5_raw/test.h5",
+                "/export/scratch2/aleksand/data/Dataset705_qata_h5_raw/test.h5"],
+            "batch_size": 1,
+            "shuffle": false,
+            "validation_split": [["test"],["test"]],
+            "num_workers": 0
+        },
+        "transforms": ["ToImage","Padding","ExpCentralCrop2d", "ToTensor","Normalize"],
+        "transforms_args": {
+            "Padding": [256],
+            "ExpCentralCrop2d": [256],
+            "Normalize": [[127.5],[127.5]]
+        }
+    },
+    "optimizer": {
+        "type": "Adam",
+        "args":{
+            "lr": 0.01,
+            "weight_decay": 0,
+            "amsgrad": true
+        }
+    },
+    "loss": ["cross_entropy_loss","tversky_loss"],
+    "metric": ["dice"],
+    "lr_scheduler": {
+        "type": "StepLR",
+        "args": {
+            "step_size": 50,
+            "gamma": 0.1
+        }
+    },
+    "trainer": {
+        "type": "Trainer",
+        "epochs": 200,
+
+        "save_dir": "saved/",
+        "save_period": 10,
+        "verbosity": 2,
+
+        "monitor": "max val_dice",
+        "early_stop": 50,
+
+        "tensorboard": true,
+        "vis": false
+    }
+}
